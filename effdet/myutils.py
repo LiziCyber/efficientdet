@@ -14,7 +14,7 @@ from warmup_scheduler import GradualWarmupScheduler
 from apex import amp
 
 
-def get_train_transforms():
+def get_train_transforms(img_size):
     return A.Compose(
         [
             A.RandomSizedCrop(min_max_height=(800, 800), height=1024, width=1024, p=0.5),
@@ -34,7 +34,7 @@ def get_train_transforms():
             A.ToGray(p=0.01),
             A.HorizontalFlip(p=0.5),
             A.VerticalFlip(p=0.5),
-            A.Resize(height=1024, width=1024, p=1),
+            A.Resize(height=img_size, width=img_size, p=1),
             A.Cutout(num_holes=8, max_h_size=64, max_w_size=64, fill_value=0, p=0.5),
             ToTensorV2(p=1.0),
         ],
@@ -48,10 +48,10 @@ def get_train_transforms():
     )
 
 
-def get_valid_transforms():
+def get_valid_transforms(img_size):
     return A.Compose(
         [
-            A.Resize(height=1024, width=1024, p=1.0),
+            A.Resize(height=img_size, width=img_size, p=1.0),
             ToTensorV2(p=1.0),
         ],
         p=1.0,
@@ -76,7 +76,7 @@ def seed_everything(seed=42):
 
 class DatasetRetriever(Dataset):
 
-    def __init__(self, marking, image_ids, data_path, transforms=None, test=False, cache=False):
+    def __init__(self, marking, image_ids, data_path, img_size, transforms=None, test=False, cache=False):
         super().__init__()
 
         self.image_ids = image_ids
@@ -85,6 +85,7 @@ class DatasetRetriever(Dataset):
         self.transforms = transforms
         self.test = test
         self.imgs = [None] * len(image_ids)
+        self.img_size = img_size
         if cache:
             gb = 0  # Gigabytes of cached images
             pbar = tqdm(range(len(self.image_ids)), desc='Caching images')
@@ -122,7 +123,7 @@ class DatasetRetriever(Dataset):
         labels = torch.ones((boxes.shape[0],), dtype=torch.int64)
 
         target = {'boxes': boxes, 'labels': labels, 'image_id': torch.tensor([index]),
-                  'img_scale': torch.tensor([1.]), 'img_size': torch.tensor([(1024, 1024)])}
+                  'img_scale': torch.tensor([1.]), 'img_size': torch.tensor([(self.img_size, self.img_size)])}
 
         if self.transforms:
             for i in range(10):
