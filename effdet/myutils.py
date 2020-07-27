@@ -136,7 +136,7 @@ class DatasetRetriever(Dataset):
                     image = sample['image']
                     target['boxes'] = torch.stack(tuple(map(torch.tensor, zip(*sample['bboxes'])))).permute(1, 0)
                     target['boxes'][:, [0, 1, 2, 3]] = target['boxes'][:, [1, 0, 3, 2]]  # yxyx: be warning
-                    #target['labels'] = torch.stack(sample['labels'])
+                    # target['labels'] = torch.stack(sample['labels'])
                     break
 
         return image, target, image_id
@@ -268,16 +268,16 @@ class Fitter:
             {'params': [p for n, p in param_optimizer if any(nd in n for nd in no_decay)], 'weight_decay': 0.0}
         ]
 
-        self.optimizer = torch.optim.SGD(self.model.parameters(), lr=config.lr)
+        self.optimizer = config.OptimizerClass(self.model.parameters(), lr=config.lr)
         self.scheduler = config.SchedulerClass(self.optimizer, **config.scheduler_params)
         if self.config.warmup:
-            self.warmup_scheduler = GradualWarmupScheduler(self.optimizer, multiplier=1, total_epoch=5, after_scheduler=self.scheduler)
+            self.warmup_scheduler = GradualWarmupScheduler(self.optimizer, multiplier=1, total_epoch=5,
+                                                           after_scheduler=self.scheduler)
 
         self.log(f'Fitter prepared. Device is {self.device}')
 
         if self.config.apex:
             self.model, self.optimizer = amp.initialize(self.model, self.optimizer, opt_level='O1')
-
 
     def fit(self, train_loader, validation_loader):
         for epoch in range(self.config.n_epochs):
@@ -332,7 +332,8 @@ class Fitter:
                 boxes = [target['boxes'].to(self.device).float() for target in targets]
                 labels = [target['labels'].to(self.device).float() for target in targets]
                 img_scale = torch.tensor([target['img_scale'] for target in targets]).to(self.device).float()
-                img_size = torch.tensor([(self.config.img_size, self.config.img_size) for target in targets]).to(self.device).float()
+                img_size = torch.tensor([(self.config.img_size, self.config.img_size) for target in targets]).to(
+                    self.device).float()
                 targets = {'bbox': boxes, 'cls': labels, 'img_scale': img_scale, 'img_size': img_size}
 
                 output = self.model(images, targets)
@@ -393,11 +394,11 @@ class Fitter:
 
             if self.config.warmup:
                 accumulate = min(self.config.accumulate,
-                                 round(np.interp(epoch*nb+step, [1, epoch*nb*5], [1, self.config.accumulate])))
+                                 round(np.interp(epoch * nb + step, [1, epoch * nb * 5], [1, self.config.accumulate])))
             else:
                 accumulate = self.config.accumulate
 
-            if (epoch*nb + step) % accumulate == 0:
+            if (epoch * nb + step) % accumulate == 0:
                 self.optimizer.step()
                 self.optimizer.zero_grad()
 
