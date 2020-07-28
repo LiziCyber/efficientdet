@@ -304,6 +304,9 @@ class Fitter:
                 self.save(f'{self.base_dir}/best-checkpoint-{str(self.epoch).zfill(3)}epoch.bin')
                 for path in sorted(glob(f'{self.base_dir}/best-checkpoint-*epoch.bin'))[:-3]:
                     os.remove(path)
+                    
+            if self.config.validation_scheduler:
+                self.scheduler.step(metrics=summary_loss.avg)
 
             self.epoch += 1
 
