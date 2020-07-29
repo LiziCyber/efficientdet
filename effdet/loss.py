@@ -6,6 +6,7 @@ from typing import Optional, List
 from .anchors import decode_box_outputs
 from .iou_loss import *
 
+
 def focal_loss(logits, targets, alpha: float, gamma: float, normalizer):
     """Compute the focal loss between `logits` and the golden `target` values.
 
@@ -120,7 +121,6 @@ def _box_loss(box_outputs, box_targets, num_positives, delta: float = 0.1):
     return box_loss
 
 
-
 class IouLoss(nn.Module):
 
     def __init__(self, losstype='Ciou', reduction='mean'):
@@ -130,7 +130,7 @@ class IouLoss(nn.Module):
 
     def forward(self, target_bboxes, pred_bboxes):
         num = target_bboxes.shape[0]
-        if self.loss == 'Iou':
+        if self.loss == 'iou':
             loss = torch.sum(1.0 - compute_iou(target_bboxes, pred_bboxes))
         elif self.loss == 'Giou':
             loss = torch.sum(1.0 - compute_g_iou(target_bboxes, pred_bboxes))
@@ -146,7 +146,7 @@ class IouLoss(nn.Module):
 
 
 class DetectionLoss(nn.Module):
-    def __init__(self, config, anchors, use_iou_loss = False):
+    def __init__(self, config, anchors, use_iou_loss=False):
         super(DetectionLoss, self).__init__()
         self.config = config
         self.num_classes = config.num_classes
@@ -157,7 +157,7 @@ class DetectionLoss(nn.Module):
         self.use_iou_loss = use_iou_loss
         if self.use_iou_loss:
             self.anchors = anchors
-            self.iou_loss = IouLoss(losstype='Diou') ## Diou
+            self.iou_loss = IouLoss(losstype=self.config.IoUtype)  ## Diou
 
     def forward(
             self, cls_outputs: List[torch.Tensor], box_outputs: List[torch.Tensor],
@@ -205,7 +205,7 @@ class DetectionLoss(nn.Module):
             cls_targets_non_neg = cls_targets_at_level >= 0
             cls_targets_at_level_oh = F.one_hot(cls_targets_at_level * cls_targets_non_neg, self.num_classes)
             cls_targets_at_level_oh = torch.where(
-               cls_targets_non_neg.unsqueeze(-1), cls_targets_at_level_oh, torch.zeros_like(cls_targets_at_level_oh))
+                cls_targets_non_neg.unsqueeze(-1), cls_targets_at_level_oh, torch.zeros_like(cls_targets_at_level_oh))
 
             bs, height, width, _, _ = cls_targets_at_level_oh.shape
             cls_targets_at_level_oh = cls_targets_at_level_oh.view(bs, height, width, -1)
@@ -229,7 +229,6 @@ class DetectionLoss(nn.Module):
                 cls_targets_list.append(cls_targets_at_level.permute(0, 2, 3, 1).reshape([bs, -1, 1]))
                 box_targets_list.append(box_targets_at_level.permute(0, 2, 3, 1).reshape([bs, -1, 4]))
 
-
         if self.use_iou_loss:
             # apply bounding box regression to anchors
             for k in range(box_outputs_list.shape[0]):
@@ -240,10 +239,8 @@ class DetectionLoss(nn.Module):
                 pred_boxes = torch.clamp(pred_boxes, 0)
                 box_losses.append(self.iou_loss(target_boxes[indices.view(-1)], pred_boxes[indices.view(-1)]))
 
-
         # Sum per level losses to total loss.
         cls_loss = torch.sum(torch.stack(cls_losses, dim=-1), dim=-1)
         box_loss = torch.sum(torch.stack(box_losses, dim=-1), dim=-1)
         total_loss = cls_loss + self.box_loss_weight * box_loss
         return total_loss, cls_loss, box_loss
-
