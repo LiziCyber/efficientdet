@@ -60,7 +60,7 @@ def default_detection_model_configs():
 
     # iou loss
     h.use_iou_loss = True
-    h.iou_loss_type = 'Ciou'
+    h.iou_loss_type = 'ciou'
     h.iou_loss_weight = 10.0
 
     return h

@@ -132,12 +132,14 @@ class IouLoss(nn.Module):
         num = target_bboxes.shape[0]
         if self.loss == 'iou':
             loss = torch.sum(1.0 - compute_iou(target_bboxes, pred_bboxes))
-        elif self.loss == 'Giou':
+        elif self.loss == 'giou':
             loss = torch.sum(1.0 - compute_g_iou(target_bboxes, pred_bboxes))
-        elif self.loss == 'Diou':
+        elif self.loss == 'diou':
             loss = torch.sum(1.0 - compute_d_iou(target_bboxes, pred_bboxes))
-        else:
+        elif self.loss == 'ciou':
             loss = torch.sum(1.0 - compute_c_iou(target_bboxes, pred_bboxes))
+        else:
+            raise RuntimeError('invalid iou loss type, please choose one from iou, giou, diou, ciou')
 
         if self.reduction == 'mean':
             return loss / num
