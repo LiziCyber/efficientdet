@@ -92,8 +92,8 @@ class DetBenchTrain(nn.Module):
         class_out, box_out = self.model(x)
         cls_targets, box_targets, num_positives = self.anchor_labeler.batch_label_anchors(
             x.shape[0], target['bbox'], target['cls'])
-        loss, class_loss, box_loss = self.loss_fn(class_out, box_out, cls_targets, box_targets, num_positives)
-        output = dict(loss=loss, class_loss=class_loss, box_loss=box_loss)
+        loss, class_loss, box_loss, iou_loss = self.loss_fn(class_out, box_out, cls_targets, box_targets, num_positives)
+        output = dict(loss=loss, class_loss=class_loss, box_loss=box_loss, iou_loss=iou_loss)
         if not self.training:
             # if eval mode, output detections for evaluation
             class_out, box_out, indices, classes = _post_process(self.config, class_out, box_out)

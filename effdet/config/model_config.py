@@ -58,6 +58,11 @@ def default_detection_model_configs():
     h.delta = 0.1
     h.box_loss_weight = 50.0
 
+    # iou loss
+    h.use_iou_loss = True
+    h.iou_loss_type = 'Ciou'
+    h.iou_loss_weight = 10.0
+
     return h
 
 

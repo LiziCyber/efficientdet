@@ -146,7 +146,7 @@ class IouLoss(nn.Module):
 
 
 class DetectionLoss(nn.Module):
-    def __init__(self, config, anchors, use_iou_loss=False):
+    def __init__(self, config, anchors):
         super(DetectionLoss, self).__init__()
         self.config = config
         self.num_classes = config.num_classes
@@ -154,10 +154,11 @@ class DetectionLoss(nn.Module):
         self.gamma = config.gamma
         self.delta = config.delta
         self.box_loss_weight = config.box_loss_weight
-        self.use_iou_loss = use_iou_loss
+        self.use_iou_loss = config.use_iou_loss
         if self.use_iou_loss:
             self.anchors = anchors
-            self.iou_loss = IouLoss(losstype=self.config.IoUtype)  ## Diou
+            self.iou_loss = IouLoss(losstype=self.config.iou_loss_type)  ## Diou
+            self.iou_loss_weight = config.iou_loss_weight
 
     def forward(
             self, cls_outputs: List[torch.Tensor], box_outputs: List[torch.Tensor],
@@ -192,6 +193,7 @@ class DetectionLoss(nn.Module):
         cls_losses = []
         box_losses = []
         if self.use_iou_loss:
+            iou_losses = []
             box_outputs_list = []
             cls_targets_list = []
             box_targets_list = []
@@ -217,14 +219,13 @@ class DetectionLoss(nn.Module):
             cls_loss = cls_loss.view(bs, height, width, -1, self.num_classes)
             cls_loss *= (cls_targets_at_level != -2).unsqueeze(-1).float()
             cls_losses.append(cls_loss.sum())
-            if not self.use_iou_loss:
-                box_losses.append(_box_loss(
-                    box_outputs[l].permute(0, 2, 3, 1),
-                    box_targets_at_level,
-                    num_positives_sum,
-                    delta=self.delta))
+            box_losses.append(_box_loss(
+                box_outputs[l].permute(0, 2, 3, 1),
+                box_targets_at_level,
+                num_positives_sum,
+                delta=self.delta))
 
-            else:
+            if self.use_iou_loss:
                 box_outputs_list.append(box_outputs[l].permute(0, 2, 3, 1).reshape([bs, -1, 4]))
                 cls_targets_list.append(cls_targets_at_level.permute(0, 2, 3, 1).reshape([bs, -1, 1]))
                 box_targets_list.append(box_targets_at_level.permute(0, 2, 3, 1).reshape([bs, -1, 4]))
@@ -237,10 +238,14 @@ class DetectionLoss(nn.Module):
                 # indices where an anchor is assigned to target box
                 indices = box_targets_list[k] == 0.0
                 pred_boxes = torch.clamp(pred_boxes, 0)
-                box_losses.append(self.iou_loss(target_boxes[indices.view(-1)], pred_boxes[indices.view(-1)]))
+                iou_losses.append(self.iou_loss(target_boxes[indices.view(-1)], pred_boxes[indices.view(-1)]))
 
         # Sum per level losses to total loss.
         cls_loss = torch.sum(torch.stack(cls_losses, dim=-1), dim=-1)
         box_loss = torch.sum(torch.stack(box_losses, dim=-1), dim=-1)
-        total_loss = cls_loss + self.box_loss_weight * box_loss
-        return total_loss, cls_loss, box_loss
+        if self.use_iou_loss:
+            iou_loss = torch.sum(torch.stack(iou_losses, dim=-1), dim=-1)
+        else:
+            iou_loss = 0
+        total_loss = cls_loss + self.box_loss_weight * box_loss + self.iou_loss_weight * iou_loss
+        return total_loss, cls_loss, box_loss, iou_loss

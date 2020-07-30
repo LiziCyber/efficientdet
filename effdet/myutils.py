@@ -357,6 +357,7 @@ class Fitter:
         summary_loss = AverageMeter()
         cls_loss = AverageMeter()
         box_loss = AverageMeter()
+        iou_loss = AverageMeter()
         t = time.time()
         nb = len(train_loader)
         pbar = tqdm(enumerate(train_loader), total=nb)
@@ -368,6 +369,7 @@ class Fitter:
                         f'summary_loss: {summary_loss.avg:.5f}, ' +
                         f'cls_loss: {cls_loss.avg:.5f}, ' +
                         f'box_loss: {box_loss.avg:.5f}, ' +
+                        f'iou_loss: {iou_loss.avg:.5f}, ' +
                         f'time: {(time.time() - t):.5f}'
                     )
 
@@ -384,6 +386,7 @@ class Fitter:
             loss = output['loss']
             closs = output['class_loss']
             bloss = output['box_loss']
+            iloss = output['iou_loss']
 
             if self.config.apex:
                 with amp.scale_loss(loss, self.optimizer) as scaled_loss:
@@ -394,6 +397,7 @@ class Fitter:
             summary_loss.update(loss.detach().item(), batch_size)
             cls_loss.update(closs.detach().item(), batch_size)
             box_loss.update(bloss.detach().item(), batch_size)
+            iou_loss.update(iloss.detach().item(), batch_size)
 
             if self.config.warmup:
                 accumulate = min(self.config.accumulate,
