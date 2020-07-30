@@ -31,7 +31,7 @@ def get_train_transforms(img_size):
                     p=0.9
                 ),
             ], p=0.9),
-            A.ToGray(p=0.01),
+            #A.ToGray(p=0.01),
             A.HorizontalFlip(p=0.5),
             A.VerticalFlip(p=0.5),
             A.Resize(height=img_size, width=img_size, p=1),
