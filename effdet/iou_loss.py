@@ -108,7 +108,7 @@ def compute_c_iou(bboxes1, bboxes2):
     c_2 = (torch.max(bboxes1[:, 2], bboxes2[:, 2]) - torch.min(bboxes1[:, 0], bboxes2[:, 0])) ** 2 + (
             torch.max(bboxes1[:, 3], bboxes2[:, 3]) - torch.min(bboxes1[:, 1], bboxes2[:, 1])) ** 2
     iou = inter / union
-    v = 4 / np.pi ** 2 * (np.arctan(w1 / h1) - np.arctan(w2 / h2)) ** 2
+    v = 4 / np.pi ** 2 * (torch.atan(w1 / h1) - torch.atan(w2 / h2)) ** 2
     with torch.no_grad():
         S = 1 - iou
         alpha = v / (S + v + eps)
