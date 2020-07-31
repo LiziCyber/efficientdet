@@ -322,7 +322,7 @@ class Fitter:
         for step, (images, targets, image_ids) in pbar:
             if self.config.verbose:
                 if step % self.config.verbose_step == 0:
-                    print(
+                    pbar.set_description(
                         f'Val Step {step}/{len(val_loader)}, ' +
                         f'summary_loss: {summary_loss.avg:.5f}, ' +
                         f'cls_loss: {cls_loss.avg:.5f}, ' +
