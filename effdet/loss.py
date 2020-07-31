@@ -241,7 +241,7 @@ class DetectionLoss(nn.Module):
                 pred_boxes = decode_box_outputs(box_outputs_list[k].float(), self.anchors.boxes, output_xyxy=True)
                 target_boxes = decode_box_outputs(box_targets_list[k].float(), self.anchors.boxes, output_xyxy=True)
                 # indices where an anchor is assigned to target box
-                indices = (box_targets_list[k] == 0.0).all(dim=1)
+                indices = (box_targets_list[k] != 0.0).any(dim=1)
                 pred_boxes = torch.clamp(pred_boxes, 0)
                 iou_losses.append(self.iou_loss(target_boxes[indices.view(-1)], pred_boxes[indices.view(-1)]))
 
