@@ -38,7 +38,7 @@ def compute_iou(bboxes1, bboxes2):
 
 def compute_g_iou(bboxes1, bboxes2):
     "box1 of shape [N, 4] and box2 of shape [N, 4]"
-    #assert bboxes1.size(0) == bboxes2.size(0)
+    # assert bboxes1.size(0) == bboxes2.size(0)
     area1 = (bboxes1[:, 2] - bboxes1[:, 0]) * (bboxes1[:, 3] - bboxes1[:, 1])
     area2 = (bboxes2[:, 2] - bboxes2[:, 0]) * (bboxes2[:, 3] - bboxes2[:, 1])
     min_x2 = torch.min(bboxes1[:, 2], bboxes2[:, 2])
@@ -56,7 +56,7 @@ def compute_g_iou(bboxes1, bboxes2):
 
 def compute_d_iou(bboxes1, bboxes2):
     "bboxes1 of shape [N, 4] and bboxes2 of shape [N, 4]"
-    #assert bboxes1.size(0) == bboxes2.size(0)
+    # assert bboxes1.size(0) == bboxes2.size(0)
     area1 = (bboxes1[:, 2] - bboxes1[:, 0]) * (bboxes1[:, 3] - bboxes1[:, 1])
     area2 = (bboxes2[:, 2] - bboxes2[:, 0]) * (bboxes2[:, 3] - bboxes2[:, 1])
     min_x2 = torch.min(bboxes1[:, 2], bboxes2[:, 2])
@@ -83,7 +83,7 @@ def compute_d_iou(bboxes1, bboxes2):
 
 def compute_c_iou(bboxes1, bboxes2):
     "bboxes1 of shape [N, 4] and bboxes2 of shape [N, 4]"
-    #assert bboxes1.size(0) == bboxes2.size(0)
+    # assert bboxes1.size(0) == bboxes2.size(0)
     w1 = bboxes1[:, 2] - bboxes1[:, 0]
     h1 = bboxes1[:, 3] - bboxes1[:, 1]
     w2 = bboxes2[:, 2] - bboxes2[:, 0]
@@ -102,7 +102,28 @@ def compute_c_iou(bboxes1, bboxes2):
     center_y1 = (bboxes1[:, 3] + bboxes1[:, 1]) / 2
     center_x2 = (bboxes2[:, 2] + bboxes2[:, 0]) / 2
     center_y2 = (bboxes2[:, 3] + bboxes2[:, 1]) / 2
+
     # squared euclidian distance between the target and predicted bboxes
+    d_2 = (center_x1 - center_x2) ** 2 + (center_y1 - center_y2) ** 2
+    # squared length of the diagonal of the minimum bbox that encloses both bboxes
+    c_2 = (torch.max(bboxes1[:, 2], bboxes2[:, 2]) - torch.min(bboxes1[:, 0], bboxes2[:, 0])) ** 2 + (
+            torch.max(bboxes1[:, 3], bboxes2[:, 3]) - torch.min(bboxes1[:, 1], bboxes2[:, 1])) ** 2
+    iou = inter / union
+    with torch.no_grad():
+        arctan = torch.atan(w2 / h2) - torch.atan(w1 / h1)
+        v = (4 / (np.pi ** 2)) * torch.pow((torch.atan(w2 / h2) - torch.atan(w1 / h1)), 2)
+        S = 1 - iou
+        alpha = v / (S + v)
+        w_temp = 2 * w1
+        distance = w1 ** 2 + h1 ** 2
+
+    ar = (8 / (np.pi ** 2)) * arctan * (w1 - w_temp) * h1
+    c_iou = iou - (d_2 / c_2 + alpha * ar / distance)
+    c_iou = torch.clamp(c_iou, min=-1.0, max=1.0)
+    return c_iou
+
+
+'''    # squared euclidian distance between the target and predicted bboxes
     d_2 = (center_x1 - center_x2) ** 2 + (center_y1 - center_y2) ** 2
     # squared length of the diagonal of the minimum bbox that encloses both bboxes
     c_2 = (torch.max(bboxes1[:, 2], bboxes2[:, 2]) - torch.min(bboxes1[:, 0], bboxes2[:, 0])) ** 2 + (
@@ -114,4 +135,4 @@ def compute_c_iou(bboxes1, bboxes2):
         alpha = S * v / (1 - iou + v + eps)
     c_iou = iou - (d_2 / c_2 + alpha * v)
     c_iou = torch.clamp(c_iou, min=-1.0, max=1.0)
-    return c_iou
+    return c_iou'''
